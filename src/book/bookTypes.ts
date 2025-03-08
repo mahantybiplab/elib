@@ -9,7 +9,7 @@ export interface Book {
     file: string; 
     createdAt: Date;
     updatedAt: Date;
-    summary: string;
-    pageCount: number;
-    publisher: string;
+    // summary: string;
+    // pageCount: number;
+    // publisher: string;
 }
