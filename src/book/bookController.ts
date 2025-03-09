@@ -4,7 +4,42 @@ import path from "node:path";
 import createHttpError from "http-errors";
 import fs from "fs";
 import bookModel from "./bookModel";
+import { Book } from "./bookTypes";
 import { AuthRequest } from "../middlewares/authenticate";
+
+const deleteFileFromCloudinary = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  book: Book,
+  bookId: string
+) => {
+  const coverFileSplits = book.coverImage.split("/");
+  const coverImagePublicId =
+    coverFileSplits.at(-2) + "/" + coverFileSplits.at(-1)?.split(".").at(-2);
+
+  const bookFileSplits = book.file.split("/");
+  const bookFilePublicId = bookFileSplits.at(-2) + "/" + bookFileSplits.at(-1);
+  console.log("bookFilePublicId", bookFilePublicId);
+
+  // todo: add try error block
+  try {
+    await cloudinary.uploader.destroy(coverImagePublicId);
+    await cloudinary.uploader.destroy(bookFilePublicId, {
+      resource_type: "raw",
+    });
+    if (req.method === "DELETE") {
+      await bookModel.deleteOne({ _id: bookId });
+
+      res.sendStatus(204);
+    }
+  } catch (err) {
+    console.error("Error while deleting files from cloudinary:", err);
+    return next(
+      createHttpError(500, "Error while deleting files from cloudinary.")
+    );
+  }
+};
 
 const createBook = async (req: Request, res: Response, next: NextFunction) => {
   const { title, genre } = req.body;
@@ -141,7 +176,7 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
     },
     { new: true }
   );
-
+  await deleteFileFromCloudinary(req, res, next, book, bookId);
   res.json(updatedBook);
 };
 
@@ -195,29 +230,7 @@ const deleteBook = async (req: Request, res: Response, next: NextFunction) => {
   // book-covers/dkzujeho0txi0yrfqjsm
   // https://res.cloudinary.com/degzfrkse/image/upload/v1712590372/book-covers/u4bt9x7sv0r0cg5cuynm.png
 
-  const coverFileSplits = book.coverImage.split("/");
-  const coverImagePublicId =
-    coverFileSplits.at(-2) + "/" + coverFileSplits.at(-1)?.split(".").at(-2);
-
-  const bookFileSplits = book.file.split("/");
-  const bookFilePublicId = bookFileSplits.at(-2) + "/" + bookFileSplits.at(-1);
-  console.log("bookFilePublicId", bookFilePublicId);
-
-  // todo: add try error block
-  try {
-    await cloudinary.uploader.destroy(coverImagePublicId);
-    await cloudinary.uploader.destroy(bookFilePublicId, {
-      resource_type: "raw",
-    });
-    await bookModel.deleteOne({ _id: bookId });
-
-    res.sendStatus(204);
-  } catch (err) {
-    console.error("Error while deleting files from cloudinary:", err);
-    return next(
-      createHttpError(500, "Error while deleting files from cloudinary.")
-    );
-  }
+  await deleteFileFromCloudinary(req, res, next, book, bookId);
 };
 
 export { createBook, updateBook, listBooks, getSingleBook, deleteBook };
