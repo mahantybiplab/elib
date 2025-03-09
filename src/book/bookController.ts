@@ -149,11 +149,30 @@ const listBooks = async (req: Request, res: Response, next: NextFunction) => {
   // const sleep = await new Promise((resolve) => setTimeout(resolve, 5000));
 
   try {
-      // todo: add pagination.
-      const book = await bookModel.find().populate("author", "name");
-      res.json(book);
+    // todo: add pagination.
+    const book = await bookModel.find().populate("author", "name");
+    res.json(book);
   } catch (err) {
-      return next(createHttpError(500, "Error while getting a book"));
+    return next(createHttpError(500, "Error while getting a book"));
   }
 };
-export { createBook, updateBook , listBooks};
+
+const getSingleBook = async ( req: Request, res: Response, next: NextFunction ) => {
+  const bookId = req.params.bookId;
+
+  try {
+    const book = await bookModel
+      .findOne({ _id: bookId })
+      // populate author field
+      .populate("author", "name");
+    if (!book) {
+      return next(createHttpError(404, "Book not found."));
+    }
+
+    res.json(book);
+  } catch (err) {
+    return next(createHttpError(500, "Error while getting a book"));
+  }
+};
+
+export { createBook, updateBook, listBooks, getSingleBook };
