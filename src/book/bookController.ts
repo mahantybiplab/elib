@@ -4,13 +4,13 @@ import path from "node:path";
 import createHttpError from "http-errors";
 import fs from "fs";
 import bookModel from "./bookModel";
+import { AuthRequest } from "../middlewares/authenticate";
 
 const createBook = async (req: Request, res: Response, next: NextFunction) => {
   const { title, genre } = req.body;
-  // console.log("files", req.files);
 
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-  // 'application/pdf'
+
   const coverImageMimeType = files.coverImage[0].mimetype.split("/").at(-1);
   const fileName = files.coverImage[0].filename;
   const filePath = path.resolve(
@@ -43,14 +43,16 @@ const createBook = async (req: Request, res: Response, next: NextFunction) => {
       }
     );
 
+    const _req = req as AuthRequest;
+    
     const newBook = await bookModel.create({
       title,
       genre,
-      author: "67cbe23d6b62055c8e6e27c8",
+      author: _req.userId,
       coverImage: uploadResult.secure_url,
       file: bookFileUploadResult.secure_url,
     });
-    
+
     // Delete temp.files
     try {
       await fs.promises.unlink(filePath);
